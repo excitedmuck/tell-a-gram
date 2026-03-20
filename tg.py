@@ -14,13 +14,28 @@ import re
 import sqlite3
 import logging
 import time
+import json
 
 # === Configuration ===
 API_ID = int(os.getenv('TG_API_ID'))
-API_HASH = os.getenv('TG_API_HASH')    
+API_HASH = os.getenv('TG_API_HASH')
 PHONE = os.getenv('TG_PHONE')
 SESSION_NAME = os.getenv('TG_SESSION_NAME')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'sk-...')
+
+def _load_openai_key() -> str:
+    """Load OpenAI key from config.json (set via the UI) or fall back to env var."""
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path) as f:
+                key = json.load(f).get('openai_api_key', '')
+            if key:
+                return key
+        except Exception:
+            pass
+    return os.getenv('OPENAI_API_KEY', '')
+
+OPENAI_API_KEY = _load_openai_key()
 CSV_FILE = 'tg_detailed_5905.csv'
 MESSAGE_DIR = './messages'
 DB_FILE = 'telegram.db'

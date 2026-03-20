@@ -5,6 +5,18 @@ import os
 import pytz
 import json
 
+CONFIG_FILE = 'config.json'
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_config(config):
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f)
+
 # Page config
 st.set_page_config(
     page_title="Telegram Manager",
@@ -448,7 +460,33 @@ if df is not None:
     
     elif st.session_state.page == "⚙️ Settings":
         st.subheader("⚙️ Settings")
-        
+
+        # --- OpenAI API Key ---
+        st.write("### 🔑 OpenAI API Key")
+        config = load_config()
+        current_key = config.get('openai_api_key', os.getenv('OPENAI_API_KEY', ''))
+        masked = f"sk-...{current_key[-4:]}" if current_key and len(current_key) > 8 else ""
+        if masked:
+            st.caption(f"Current key: `{masked}`")
+
+        new_key = st.text_input(
+            "Enter new OpenAI API key",
+            type="password",
+            placeholder="sk-...",
+            help="Your key is saved locally in config.json and never sent anywhere except OpenAI."
+        )
+        if st.button("Save API Key"):
+            if new_key.strip().startswith("sk-"):
+                config['openai_api_key'] = new_key.strip()
+                save_config(config)
+                st.toast("API key saved!", icon="✅")
+                st.rerun()
+            else:
+                st.error("Invalid key — must start with 'sk-'")
+
+        st.markdown("---")
+
+        # --- Export Options ---
         st.write("### Export Options")
         export_format = st.selectbox("Export Format", ["CSV", "Excel"])
         if st.button("Export Data"):
@@ -459,12 +497,12 @@ if df is not None:
                 filename = f"telegram_export_{timestamp}.xlsx"
                 df.to_excel(filename, index=False)
                 st.toast(f"Data exported to {filename}", icon="📤")
-        
+
         st.write("### Display Preferences")
         st.number_input("Messages to fetch per chat", min_value=5, max_value=100, value=10)
         st.checkbox("Dark mode", value=False)
         st.checkbox("Show message timestamps", value=True)
-        
+
         if st.button("Clear Cache"):
             st.cache_data.clear()
             st.toast("Cache cleared", icon="🗑️")
